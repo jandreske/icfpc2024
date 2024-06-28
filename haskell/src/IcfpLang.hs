@@ -16,11 +16,11 @@ toAscii = map charToAscii
 data Expr = VBool !Bool
           | VInt !Integer
           | VString !String
-          | Unary !Char !Expr
-          | Binary !Char !Expr !Expr
-          | If !Expr !Expr !Expr
-          | Lambda !Integer !Expr
-          | Var !Integer
+          | Unary !Char Expr
+          | Binary !Char Expr Expr
+          | If !Expr Expr Expr
+          | Lambda !Int Expr
+          | Var !Int
        deriving (Eq)
 
 precedence :: Char -> Int
@@ -36,8 +36,8 @@ precedence _ = 4
 instance Show Expr where
   showsPrec p expr =
     case expr of
-      VBool False -> showChar 'F'
-      VBool True  -> showChar 'T'
+      VBool False -> showString "False"
+      VBool True  -> showString "True"
       VInt n      -> shows n
       VString s   -> shows (toAscii s)
       Var n       -> showChar 'v' . shows n
@@ -89,8 +89,8 @@ parse1 ('?':p) = let (e1,p1) = parse1 p
                  in (If e1 e2 e3, p3)
 parse1 ('L':p) = let (n,p') = parseInt p
                      (body,p'') = parse1 p'
-                 in (Lambda n body, p'')
-parse1 ('v':p) = let (n,p') = parseInt p in (Var n, p')
+                 in (Lambda (fromInteger n) body, p'')
+parse1 ('v':p) = let (n,p') = parseInt p in (Var (fromInteger n), p')
 parse1 s = error ("invalid program: " ++ show s)
 
 parseProgram :: String -> Expr
@@ -130,15 +130,51 @@ eval (Binary op e1 e2) = apply2 op (evaluate e1) (evaluate e2)
 
 evalApp :: Expr -> Expr -> Expr
 evalApp (Lambda v body) e = subst v e body
-evalApp e1 e2 = error ("B$: lambda expected, but got: " ++ show e1)
+evalApp e1 _ = error ("B$: lambda expected, but got: " ++ show e1)
 
-subst :: Integer -> Expr -> Expr -> Expr
+subst :: Int -> Expr -> Expr -> Expr
 subst var val e@(Var v) = if var == v then val else e
 subst var val (Unary op e) = Unary op (subst var val e)
 subst var val (Binary op e1 e2) = Binary op (subst var val e1) (subst var val e2)
 subst var val (If e1 e2 e3) = If (subst var val e1) (subst var val e2) (subst var val e3)
-subst var val e@(Lambda v b) = if var == v then e else Lambda v (subst var val b)
+subst var val e@(Lambda v b) = if var == v then e
+                               else let (v',b') = renameIfFree v b val in
+                                    Lambda v' (subst var val b')
 subst _ _ e = e
+
+renameIfFree :: Int -> Expr -> Expr -> (Int, Expr)
+renameIfFree v body expr | v `freeIn` expr = let v' = maxVar expr + 1 in (v', rename v v' body)
+                         | otherwise = (v, body)
+
+freeIn :: Int -> Expr -> Bool
+v `freeIn` e = case e of
+                 Var n -> v == n
+                 Lambda n b -> v /= n && v `freeIn` b
+                 Unary _ e1 -> v `freeIn` e1
+                 Binary _ a b -> v `freeIn` a || v `freeIn` b
+                 If a b c -> v `freeIn` a || v `freeIn` b || v `freeIn` c
+                 _ -> False
+
+maxVar :: Expr -> Int
+maxVar = go (-1)
+  where
+    go n e = case e of
+               Var v -> max v n
+               Lambda v b -> go (max n v) b
+               Unary _ a -> go n a
+               Binary _ a b -> go (go n a) b
+               If a b c -> go (go (go n a) b) c
+               _ -> n               
+
+rename :: Int -> Int -> Expr -> Expr
+rename v v' e = case e of
+                  Var n -> if n == v then Var v' else e
+                  Lambda n b | n == v -> Lambda v' (rename v v' b)
+                             | otherwise -> Lambda v (rename v v' b)
+                  Unary op a -> Unary op (rename v v' a)
+                  Binary op a b -> Binary op (rename v v' a) (rename v v' b)
+                  If a b c -> If (rename v v' a) (rename v v' b) (rename v v' c)
+                  _ -> e
 
 apply2 :: Char -> Expr -> Expr -> Expr
 apply2 '+' (VInt a) (VInt b) = VInt (a + b)
