@@ -16,6 +16,19 @@ def get_acc(target, position, velocity):
     return a
 
 
+def get_greedy_list(coordinates):
+    path = []
+    posx = 0
+    posy = 0
+    while not len(coordinates) == 0:
+        coordinates.sort(key=lambda x: abs(x[0]-posx) + abs(x[1]-posy))
+        point = coordinates.pop(0)
+        posx = point[0]
+        posy = point[1]
+        path.append(point)
+    return path
+
+
 def get_coords_sorted(coordinates, strategy):
     match strategy:
         case 0:
@@ -26,6 +39,8 @@ def get_coords_sorted(coordinates, strategy):
             return sorted(coordinates, key=lambda x: (x[1], x[0]))
         case 3:
             return sorted(coordinates, key=lambda x: abs(x[0]) + abs(x[1]))
+        case 4:
+            return get_greedy_list(coordinates)
 
 
 def solve(pid, strategy):
@@ -58,8 +73,9 @@ def solve_and_send(pid):
     # 1 -> sort by x, then by y
     # 2 -> sort by y, then by x
     # 3 -> sort from near to far
+    # 4 -> always go to nearest from current pos
     best = ''
-    for strategy in range(0, 4):
+    for strategy in range(0, 5):
         solution = solve(pid, strategy)
         print(f"problem {pid} with strategy {strategy}: {len(solution)} moves")
         if best == '' or len(solution) < len(best):
@@ -72,5 +88,5 @@ def solve_and_send(pid):
     return answer
 
 
-for pid in range(1, 12):
+for pid in range(14, 22):
     print(solve_and_send(pid))
