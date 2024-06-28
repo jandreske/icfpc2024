@@ -16,13 +16,26 @@ def get_acc(target, position, velocity):
     return a
 
 
-def solve(pid):
+def get_coords_sorted(coordinates, strategy):
+    match strategy:
+        case 0:
+            return coordinates
+        case 1:
+            return sorted(coordinates)
+        case 2:
+            return sorted(coordinates, key=lambda x: (x[1], x[0]))
+        case 3:
+            return sorted(coordinates, key=lambda x: abs(x[0]) + abs(x[1]))
+
+
+def solve(pid, strategy):
     coordinates = []
     moves = []
     with open(f'spaceship/problems/spaceship{pid}.txt', "r") as file:
         for line in file.readlines():
             if not line.isspace():
                 coordinates.append((int(line.split()[0]), int(line.split()[1])))
+    coordinates = get_coords_sorted(coordinates, strategy)
     vx = 0
     vy = 0
     posx = 0
@@ -37,17 +50,27 @@ def solve(pid):
             posx += vx
             posy += vy
     solution = ''.join(moves)
-    with open(f'spaceship/solutions/spaceship{pid}.txt', "w") as file:
-        file.write(solution)
     return solution
 
 
 def solve_and_send(pid):
-    solution = solve(pid)
-    answer = submit_string.submit(f"solve spaceship{pid} {solution}")
+    # 0 -> in given order
+    # 1 -> sort by x, then by y
+    # 2 -> sort by y, then by x
+    # 3 -> sort from near to far
+    best = ''
+    for strategy in range(0, 4):
+        solution = solve(pid, strategy)
+        print(f"problem {pid} with strategy {strategy}: {len(solution)} moves")
+        if best == '' or len(solution) < len(best):
+            best = solution
+    with open(f'spaceship/solutions/spaceship{pid}.txt', "w") as file:
+        file.write(best)
+    answer = submit_string.submit(f"solve spaceship{pid} {best}")
     with open(f'spaceship/solutions/spaceship{pid}.txt', "a") as file:
         file.write(f"\n{answer}")
     return answer
 
 
-print(solve_and_send(5))
+for pid in range(1, 12):
+    print(solve_and_send(pid))
