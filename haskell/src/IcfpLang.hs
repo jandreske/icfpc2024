@@ -63,6 +63,7 @@ parseInt str = go str 0
   where
     go "" n = (n, "")
     go (' ':s) n = (n, s)
+    go ('\n':s) n = (n, s)
     go (c:s) n = go s (94 * n + fromIntegral (fromEnum c) - 33)
 
 intToString :: Integer -> String
@@ -75,6 +76,7 @@ intToString num = if num == 0 then "!" else go "" num
 
 parse1 :: String -> (Expr, String)
 parse1 (' ':p) = parse1 p
+parse1 ('\n':p) = parse1 p
 parse1 ('T':p) = (VBool True, p)
 parse1 ('F':p) = (VBool False, p)
 parse1 ('I':p) = let (n,p') = parseInt p in (VInt n, p')
@@ -97,7 +99,7 @@ parseProgram :: String -> Expr
 parseProgram = go
   where
     go s = let (expr, rest) = parse1 s in
-           case dropWhile (' '==) rest of
+           case dropWhile (\c -> c == ' ' || c == '\n') rest of
              "" -> expr
              r -> error ("trailing garbage: " ++ show r)
 
