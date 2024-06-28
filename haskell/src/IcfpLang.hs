@@ -14,29 +14,39 @@ toAscii :: String -> String
 toAscii = map charToAscii
 
 data Expr = VBool !Bool
-          | VInt Integer
-          | VString String
-          | Unary !Char Expr
-          | Binary !Char Expr Expr
-          | If Expr Expr Expr
-          | Lambda Integer Expr
-          | Var Integer
+          | VInt !Integer
+          | VString !String
+          | Unary !Char !Expr
+          | Binary !Char !Expr !Expr
+          | If !Expr !Expr !Expr
+          | Lambda !Integer !Expr
+          | Var !Integer
        deriving (Eq)
 
-instance Show Expr where
-  showsPrec _ (VBool False) = showChar 'F'
-  showsPrec _ (VBool True) = showChar 'T'
-  showsPrec _ (VInt n) = shows n
-  showsPrec _ (VString s) = shows s . showChar ' ' . showParen True (shows (toAscii s))
-  showsPrec _ (Unary op e) = showChar op . showChar ' ' . showParen True (shows e)
-  showsPrec _ (Binary op a b) = showParen True (shows a) . showChar ' ' . showChar op
-                              . showChar ' ' . showParen True (shows b)
-  showsPrec _ (If a b c) = showString "if " . showParen True (shows a)
-                         . showString " then " . showParen True (shows b)
-                         . showString " else " . showParen True (shows c) . showString " fi"
-  showsPrec _ (Lambda n e) = showChar '\\' . shows n . showString ". " . shows e
-  showsPrec _ (Var n) = showChar 'v' . shows n
+precedence :: Char -> Int
+precedence '+' = 6
+precedence '-' = 6
+precedence '*' = 7
+precedence '/' = 7
+precedence '%' = 7
+precedence '.' = 8
+precedence '$' = 0
+precedence _ = 4
 
+instance Show Expr where
+  showsPrec p expr =
+    case expr of
+      VBool False -> showChar 'F'
+      VBool True  -> showChar 'T'
+      VInt n      -> shows n
+      VString s   -> shows (toAscii s)
+      Var n       -> showChar 'v' . shows n
+      Unary op e  -> showParen (p >= 11) $ showChar op . showsPrec 11 e
+      Binary op a b -> let pr = precedence op in 
+                       showParen (p >= pr) $ showsPrec pr a . showChar ' ' . showChar op . showChar ' ' . showsPrec pr b
+      If a b c    ->  showString "if " . shows a . showString " then " . shows b
+                         . showString " else " . shows c . showString " fi"
+      Lambda v e -> showParen (p >= 2) $ showChar '\\' . shows v . showString " -> " . showsPrec 2 e
 
 
 isValue :: Expr -> Bool
@@ -60,7 +70,7 @@ intToString num = if num == 0 then "!" else go "" num
   where
     go :: String -> Integer -> String
     go s n | n == 0 = s
-           | otherwise = go (toEnum (fromIntegral (n `rem` 94 + 33)) : s) (n `quot` 94)
+           | otherwise = go (toEnum (fromIntegral (n `rem` 94) + 33) : s) (n `quot` 94)
 
 
 parse1 :: String -> (Expr, String)
@@ -97,30 +107,30 @@ evaluate e | isValue e = e
 
 
 eval :: Expr -> Expr
-eval (If e1 e2 e3) = case eval e1 of
+eval (If e1 e2 e3) = case evaluate e1 of
                        VBool True -> e2
                        VBool False -> e3
                        ex -> error ("If: boolean expected, but got: " ++ show ex)
-eval (Unary '-' e) = case eval e of
+eval (Unary '-' e) = case evaluate e of
                        VInt n -> VInt (- n)
                        ex -> error ("U-: integer expected, but got: " ++ show ex)
-eval (Unary '!' e) = case eval e of
+eval (Unary '!' e) = case evaluate e of
                        VBool b -> VBool (not b)
                        ex -> error ("U!: boolean expected, but got: " ++ show ex)
-eval (Unary '#' e) = case eval e of
+eval (Unary '#' e) = case evaluate e of
                        VString s -> case parseInt s of
                                     (n,"") -> VInt n
                                     _ -> error "U#: invalid string"
                        ex -> error ("U#: string expected, but got: " ++ show ex)
-eval (Unary '$' e) = case eval e of
+eval (Unary '$' e) = case evaluate e of
                        VInt n -> VString (intToString n)
                        ex -> error ("U$: int expected, but got: " ++ show ex)
-eval (Binary '$' t1 t2) = evalApp (eval t1) t2
-eval (Binary op e1 e2) = apply2 op (eval e1) (eval e2)
-eval e = e
+eval (Binary '$' t1 t2) = evalApp (evaluate t1) t2
+eval (Binary op e1 e2) = apply2 op (evaluate e1) (evaluate e2)
 
 evalApp :: Expr -> Expr -> Expr
 evalApp (Lambda v body) e = subst v e body
+evalApp e1 e2 = error ("B$: lambda expected, but got: " ++ show e1)
 
 subst :: Integer -> Expr -> Expr -> Expr
 subst var val e@(Var v) = if var == v then val else e
