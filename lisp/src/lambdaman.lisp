@@ -5,7 +5,7 @@
 (in-package :lambdaman)
 
 ; limit coordinates to sensible sizes
-(deftype coordinate () '(mod 10000))
+(deftype coordinate () '(mod 100000))
 
 (declaim (inline %make-grid grid-width grid-height grid-cells))
 

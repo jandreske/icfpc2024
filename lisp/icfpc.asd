@@ -1,10 +1,9 @@
 (defsystem "icfpc"
   :version "0.1"
-  :depends-on (:alexandria :nodgui)
+  :depends-on (:alexandria :nodgui :quri :dexador)
   ;; also consider
   ;; :lparallel
   ;; :com.inuoe.jzon
-  ;; :dexador + :quri
   :pathname "src/"
   :components ((:file "binary-heap")
 	       (:file "lambdaman" :depends-on ("binary-heap"))

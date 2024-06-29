@@ -1,7 +1,7 @@
 (defpackage :icfplang
   (:use :cl)
   (:import-from :alexandria :array-index :array-length)
-  (:export :icfp->ascii :ascii->icfp :parse-program :eval-icfp))
+  (:export :icfp->ascii :ascii->icfp :parse-program :encode :eval-icfp))
 
 
 (in-package :icfplang)
@@ -21,7 +21,9 @@
   (not (consp e)))
 
 (defun icfp->ascii (s)
-  (map 'string #'(lambda (c) (char +to-ascii+ (- (char-int c) 33))) s))
+  (if (stringp s)
+      (map 'string #'(lambda (c) (char +to-ascii+ (- (char-int c) 33))) s)
+      s))
 
 (defun ascii->icfp (s)
   ;; TODO: use table lookup
@@ -50,6 +52,47 @@
     (#\. 'concat)
     (#\T 'take)
     (#\D 'drop)))
+
+(defun encode-token (tag)
+  (ecase tag
+    (apply "B$")
+    (if "?")
+    (negate "U-")
+    (not "U!")
+    (string->int "U#")
+    (int->string "U$")
+    (+ "B+")
+    (- "B-")
+    (* "B*")
+    (/ "B/")
+    (% "B%")
+    (< "B<")
+    (> "B>")
+    (= "B=")
+    (or "B|")
+    (and "B&")
+    (concat "B.")
+    (take "BT")
+    (drop "BD")))
+    
+
+(defun encode-expr (e)
+  (typecase e
+    (string (concatenate 'string "S" e))
+    (number (concatenate 'string "I" (int-to-string e)))
+    (null "F")
+    (cons
+     (case (car e)
+       (lambda (concatenate 'string "L" (int-to-string (cadr e)) " " (encode-expr (caddr e))))
+       (var (concatenate 'string "v" (int-to-string (cadr e))))
+       (t 
+	(apply concatenate 'string (encode-token (car e))
+	       (mapcar #'encode-expr (cdr e))))))
+    (t "T")
+    ))
+
+(defun encode (program)
+  (apply #'concatenate 'string (mapcar #'encode-expr program)))
 
 (defun self-evaluating-p (expr)
   (declare (optimize speed))
@@ -260,3 +303,5 @@
 		  (rename v v1 (caddr e))
 		  (rename v v1 (cadddr e))))
 	(t (cons (car e) (mapcar #'(lambda (e) (rename v v1 e)) (cdr e)))))))
+
+
