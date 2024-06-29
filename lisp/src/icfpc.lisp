@@ -18,11 +18,15 @@ Possible commands:
 
 (defun process (args)
   (cond ((null args) (usage))
+	((string= (car args) "submit")
+	 (send (list (ascii->icfp (cadr args)))))
+	((string= (car args) "lambdaman6")
+	 (send `((icfplang::concat ,(ascii->icfp "solve lambdaman6 ") ,icfplang::+LAM6+))))
 	((string= (car args) "eval-file")
 	 (let* ((program (alexandria:read-file-into-string (cadr args)))
 		(parsed (parse-program program)))
-	   (format t "PROGRAM: ~S~%~%PARSED: ~S~%"
-		   program parsed)
+	   (format t "PROGRAM: ~S~%~%PARSED: ~S~%SIMPLIFIED: ~S~%"
+		   program parsed (simplify parsed))
 	   (multiple-value-bind (value reductions)
 	       (eval-icfp parsed)
 	     (format t "~%VALUE: ~S~%REDUCTIONS: ~S~%" (icfp->ascii value) reductions))))
@@ -33,11 +37,13 @@ Possible commands:
 					   problem-number
 					   ".txt"))
 		(grid (read-grid problem-file))
-		(moves (path-to-pills grid)))
+		(moves (path-to-pills grid))
+		(opt (icfplang:optimize-moves (ascii->icfp moves))))
 	   (format t "Map size: ~Ax~A~%" (grid-width grid) (grid-height grid))
 	   (format t "Moves: ~A~%" (length moves))
-	   (send (list (ascii->icfp
-			(concatenate 'string "solve lambdaman" problem-number " " moves))))))
+	   (send `((icfplang::concat ,(ascii->icfp (concatenate 'string "solve lambdaman" problem-number " "))
+			   ,opt)))))
+
 	(t (usage))))
 
 

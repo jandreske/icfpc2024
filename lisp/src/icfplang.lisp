@@ -1,7 +1,7 @@
 (defpackage :icfplang
   (:use :cl)
   (:import-from :alexandria :array-index :array-length)
-  (:export :icfp->ascii :ascii->icfp :parse-program :encode :eval-icfp))
+  (:export :icfp->ascii :ascii->icfp :parse-program :encode :eval-icfp :simplify :optimize-moves))
 
 
 (in-package :icfplang)
@@ -85,14 +85,16 @@
      (case (car e)
        (lambda (concatenate 'string "L" (int-to-string (cadr e)) " " (encode-expr (caddr e))))
        (var (concatenate 'string "v" (int-to-string (cadr e))))
-       (t 
-	(apply concatenate 'string (encode-token (car e))
-	       (mapcar #'encode-expr (cdr e))))))
-    (t "T")
-    ))
+       (t
+	(reduce #'(lambda (a b) (concatenate 'string a " " b))
+		(mapcar #'encode-expr (cdr e))
+		:initial-value (encode-token (car e))))))
+    (t (if (eq e t) "T" (error "unknown expression: ~S" e)))))
+   
 
 (defun encode (program)
-  (apply #'concatenate 'string (mapcar #'encode-expr program)))
+  (reduce #'(lambda (a b) (concatenate 'string a " " b))
+	  (mapcar #'encode-expr program)))
 
 (defun self-evaluating-p (expr)
   (declare (optimize speed))
@@ -178,7 +180,7 @@
 
 (defun eval-icfp (e)
   (let ((betas 0))
-    (declare (type (integer 0 100000000) betas))
+    (declare (type (integer 0 *) betas))
     (declare (optimize (speed 2)))
     (labels ((evaluate (e)
 	       (do ((e e (eval1 e)))
@@ -203,6 +205,7 @@
 		  (eval-apply (evaluate (cadr e)) (caddr e)))
 		 (+ (+ (evaluate (cadr e)) (evaluate (caddr e))))
 		 (- (- (evaluate (cadr e)) (evaluate (caddr e))))
+		 (* (* (evaluate (cadr e)) (evaluate (caddr e))))
 		 (/ (truncate (evaluate (cadr e))
 			      (evaluate (caddr e))))
 		 (% (multiple-value-bind (q r)
@@ -223,18 +226,11 @@
 			       (evaluate (cadr e))))
 		 (drop (subseq (evaluate (caddr e))
 			       (evaluate (cadr e))))))
-	     (strict-eval (e)
-	       (if (and (consp e)
-			(member (car e) '(+ - * / % < > = concat))
-			(atomp (cadr e))
-			(atomp (caddr e)))
-		   e ; (eval1 e)
-		   e))
 	     (eval-apply (f a)
 	       (declare (optimize (speed 2)))
 	       (if (eq (car f) 'lambda)
 		   (progn (incf betas)
-			  (substit (cadr f) (strict-eval a) (caddr f)))
+			  (substit (cadr f) a (caddr f)))
 		   (error "B$: lambda expected, but got ~S" f))))
       (let ((val (evaluate e)))
 	(values val betas)))))
@@ -304,4 +300,160 @@
 		  (rename v v1 (cadddr e))))
 	(t (cons (car e) (mapcar #'(lambda (e) (rename v v1 e)) (cdr e)))))))
 
+(defconstant +Y+ '(lambda 1 (apply
+			     (lambda 2 (apply (var 1) (apply (var 2) (var 2))))
+			     (lambda 2 (apply (var 1) (apply (var 2) (var 2)))))))
+		   
+
+(defvar +REPEAT+ `(apply ,+Y+
+			 (lambda 3 ; recurse
+			   (lambda 4 ; string
+			     (lambda 5 ; n
+			       (if (= (var 5) 1)
+				   (var 4)
+				   (concat (var 4)
+					   (apply (apply (var 3) (var 4) (- (var 5) 1))))))))))
+
+(defvar +LAM6+ `(apply (lambda 6 (apply (apply (var 6) "L") 18684)) ,+repeat+))
+
+(defun optimize-moves (moves)
+  (let ((groups (util:find-repetitions moves))
+	(repeat '(var 10)))
+    (labels ((run (str ms)
+	       (cond ((null ms) (coerce (nreverse str) 'string))
+		     ((< (car (car ms)) 8)
+		      (run (cons-times (caar ms) (cdar ms) str) (cdr ms)))
+		     (t
+		      `(concat ,(coerce (nreverse str) 'string)
+			       (concat (apply (apply ,repeat ,(string (cdar ms))) ,(caar ms))
+				       ,(run nil (cdr ms))))))))
+      `(apply (lambda 10 ,(run nil groups)), +repeat+))))
+
+
+(defun cons-times (n x xs)
+  (if (zerop n)
+      xs
+      (cons x (cons-times (- n 1) x xs))))
+
+(defun compile-expr (e)
+  (cond ((null e) 'nil)
+	((numberp e) e)
+	((stringp e) e)
+	((atom e) ; must be t
+	 't)
+	((eq (car e) 'lambda) e)
+	((eq (car e) 'if) `(if ,(compile-expr (cadr e))
+			       ,(compile-expr (caddr e))
+			       ,(compile-expr (cadddr e))))
+	((eq (car e) 'apply)
+	 `(eval-application ,(compile-expr (cadr e)) (delay ,(compile-expr (caddr e)))))
+	((eq (car e) 'var) 'todo)
+	((eq (car e) '+) (compile-bin "primPlus" e))
+	((eq (car e) '-) (compile-bin "primMinus" e))
+	((eq (car e) '*) (compile-bin "primMul" e))
+	((eq (car e) '/) (compile-bin "primQuot" e))
+	((eq (car e) '%) (compile-bin "primRem" e))
+	((eq (car e) '<) (compile-bin "primLess" e))
+	((eq (car e) '>) (compile-bin "primGreater" e))
+	((eq (car e) '=) (compile-bin "primEq" e))
+	((eq (car e) 'take) (compile-bin "primTake" e))
+	((eq (car e) 'drop) (compile-bin "primDrop" e))
+	((eq (car e) 'and) (compile-bin "primAnd" e))
+	((eq (car e) 'or) (compile-bin "primOr" e))
+	((eq (car e) 'concat) (compile-bin "primConcat" e))
+	((eq (car e) 'not) (compile-unary "primNot" e))
+	((eq (car e) 'negate) (compile-unary "primNegate" e))
+	((eq (car e) 'int->string) (compile-unary "primIntToString" e))
+	((eq (car e) 'string->int) (compile-unary "primStringToInt" e))
+	(t (error "compile: unknown expression type: ~S" e))))
+
+(defun compile-bin (op e)
+  (format nil "(~A ~A ~A)~%" op (compile-to-hs (cadr e)) (compile-to-hs (caddr e))))
+
+(defun compile-unary (op e)
+  (format nil "(~A ~A)~%" op (compile-to-hs (cadr e))))
+
+
+  
+(defun simplify (e)
+  "Simplify for display."
+  ;; (flatten-app
+   (join-lambdas
+    (var-to-symbol
+    (subst-if 'Y #'y-combinator-p e))))
+
+(defun flatten-app (e)
+  (if (consp e)
+      (if (and (eq (car e) 'apply)
+	       (consp (cadr e))
+	       (eq (car (cadr e)) 'apply))
+	  (flatten-app (list 'lambda (flatten-app (cadr (cadr e)))
+			     (flatten-app (caddr (cadr e)))
+			     (flatten-app (caddr e))))
+	  (cons (car e) (mapcar #'flatten-app (cdr e))))
+      e))
+
+(defun join-lambdas (e)
+  (if (and (consp e)
+	   (eq (car e) 'lambda)
+	   (consp (caddr e))
+	   (eq (caaddr e) 'lambda))
+      (join-lambdas (list 'lambda (join-vars (cadr e) (cadr (caddr e))) (caddr (caddr e))))
+      (if (consp e)
+	  (cons (car e) (mapcar #'join-lambdas (cdr e)))
+	  e)))
+
+(defun join-vars (a b)
+  (let ((a (if (atom a) (list a) a))
+	(b (if (atom b) (list b) b)))
+    (concatenate 'list a b)))
+
+(defun var-to-symbol (e)
+  (if (consp e)
+      (case (car e)
+	(var (read-from-string (format nil "v~a" (cadr e))))
+	(t (cons (car e) (mapcar #'var-to-symbol (cdr e)))))
+      e))
+
+(defun y-combinator-p (e)
+  (equal e +Y+))
+		       
+
+(defun fib (n)
+  (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2)))))
+
+
+
+(defun test (n)
+  (labels ((f3 (n)
+	     (declare (type (integer 0 *) n))
+	     (if (and (> n 1000000)
+		      (f6 n 2)
+		      (f7 (+ n 1)))
+		 n
+		 (f3 (+ n 1))))
+	   (f7 (n)
+	     (declare (type (integer 0 *) n))
+	     (if (= n 1)
+		 t
+		 (if (oddp n)
+		     nil
+		     (f7 (truncate n 2)))))
+	   (f6 (m n)
+	     (declare (type (integer 0 *) n))
+	     (if (= m n)
+		 t
+		 (if (= (rem m n) 0)
+		     nil
+		     (f6 m (+ n 1))))))
+    (declare (optimize speed))
+    (f3 n)))
+
+(defun strange (a4 b6 c7)
+  (if (> (func3 b6) (- b6 1))
+      (if (divisible a4 b6)
+	  (* (/ c7 (func3 b6))
+	     (- (func3 b6) 1))
+	  c7)
+      c7))
 

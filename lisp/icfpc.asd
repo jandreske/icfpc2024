@@ -8,8 +8,9 @@
   :components ((:file "binary-heap")
 	       (:file "lambdaman" :depends-on ("binary-heap"))
 	       (:file "gui")
+	       (:file "util")
 	       (:file "icfplang")
-	       (:file "icfpc" :depends-on ("icfplang" "lambdaman"))))
+	       (:file "icfpc" :depends-on ("util" "icfplang" "lambdaman"))))
 
 (defsystem "icfpc/executable"
   :build-operation program-op
