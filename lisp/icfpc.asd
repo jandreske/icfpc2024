@@ -7,10 +7,11 @@
   :pathname "src/"
   :components ((:file "binary-heap")
 	       (:file "lambdaman" :depends-on ("binary-heap"))
+	       (:file "spaceship")
 	       (:file "gui")
 	       (:file "util")
 	       (:file "icfplang")
-	       (:file "icfpc" :depends-on ("util" "icfplang" "lambdaman"))))
+	       (:file "icfpc" :depends-on ("util" "icfplang" "lambdaman" "spaceship"))))
 
 (defsystem "icfpc/executable"
   :build-operation program-op

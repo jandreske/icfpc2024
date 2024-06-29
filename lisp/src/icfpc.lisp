@@ -43,7 +43,16 @@ Possible commands:
 	   (format t "Moves: ~A~%" (length moves))
 	   (send `((icfplang::concat ,(ascii->icfp (concatenate 'string "solve lambdaman" problem-number " "))
 			   ,opt)))))
-
+	((string= (car args) "solve-spaceship")
+	 (let* ((problem-number (cadr args))
+		(problem-file (concatenate 'string (uiop:getenv "ICFPC_HOME")
+					   "/courses/spaceship/problems/spaceship"
+					   problem-number
+					   ".txt"))
+		(locations (spaceship:read-locations problem-file))
+		(moves (spaceship:solve locations)))
+	   (format t "~&Number of locations to visit: ~A~%" (floor (length locations) 2))
+	   (format t "Moves: ~S~%" moves)))
 	(t (usage))))
 
 
