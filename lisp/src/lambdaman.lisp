@@ -57,6 +57,13 @@
 	(dy (abs (- (pos-y a) (pos-y b)))))
     (+ dx dy)))
 
+(declaim (ftype (function (pos coordinate coordinate) coordinate) manhattan-distance-xy)) 
+(defun manhattan-distance-xy (a x y)
+  (declare (optimize speed))
+  (let ((dx (abs (- (pos-x a) x)))
+	(dy (abs (- (pos-y a) y))))
+    (+ dx dy)))
+
 (declaim (ftype (function (pos pos) character) get-move))
 (defun get-move (from to)
   (cond ((< (pos-x to) (pos-x from)) #\L)
@@ -176,14 +183,14 @@
   ;; uh..
   (let ((min-dist 1000000)
 	(best-pos nil))
+    (declare (type (integer 0 1000000) min-dist))
     (dotimes (x (grid-width grid))
       (dotimes (y (grid-height grid))
 	(when (char= (grid-ref grid x y) c)
-	  (let* ((p (make-pos :x x :y y))
-		 (dist (manhattan-distance pos p)))
+	  (let ((dist (manhattan-distance-xy pos x y)))
 	    (when (< dist min-dist)
 	      (setf min-dist dist)
-	      (setf best-pos p))))))
+	      (setf best-pos (make-pos :x x :y y)))))))
     best-pos))
 
 (declaim (ftype (function (grid) string) path-to-pills))
