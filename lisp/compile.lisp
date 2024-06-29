@@ -1,0 +1,1 @@
+(asdf:make "icfpc/executable")
