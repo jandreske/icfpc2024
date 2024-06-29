@@ -206,7 +206,7 @@
       (let ((sp (shortest-path grid pos pill)))
 	(unless (>= (length sp) 2)
 	  (error "no path found: ~S -> ~S" pos pill))
-	(let ((dest (cadr sp)))
+	(dolist (dest (cdr sp))
 	  (push (get-move pos dest) path)
 	  (setf pos dest)
 	  (grid-set grid (pos-x pos) (pos-y pos) #\space))))))
