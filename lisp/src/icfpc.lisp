@@ -54,7 +54,13 @@ Possible commands:
 		(locations (spaceship:read-locations problem-file))
 		(moves (spaceship:solve locations)))
 	   (format t "Number of moves: ~S~%" (length moves))
-	   (when (cddr args)
+	   (with-open-file (str "spaceship-moves.txt"
+			    :direction :output
+			    :if-exists :supersede
+			    :if-does-not-exist :create)
+	     (format str "solve spaceship~A ~A~%" problem-number moves))
+
+	   (when (and (cddr args) (<= (length moves) 1000000))
 	     (send (list (ascii->icfp (concatenate 'string "solve spaceship" problem-number " " moves)))))))
 	(t (usage))))
 
@@ -66,7 +72,7 @@ Possible commands:
     (declare (type string body))
     (multiple-value-bind (text http-code http-headers quri x)
 	(dex:post uri :headers headers :content body)
-      (declare (ignore http-headers quri x))
+      (declare (ignore http-code http-headers quri x))
       (when *verbose*
 	(format t "SENT: ~S~%RECV: ~S~%" body text))
       (multiple-value-bind (value reductions)
