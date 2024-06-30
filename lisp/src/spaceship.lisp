@@ -5,7 +5,9 @@
 
 (in-package :spaceship)
 
-(deftype coord () '(signed-byte 16))
+(defconstant +max-moves+ 10000000)
+
+(deftype coord () '(signed-byte 32))
 
 (defun read-locations (file)
   (with-open-file (s file :direction :input)
@@ -52,14 +54,20 @@
 (defun dist-to-motionless (velocity)
   (floor (* velocity (+ 1 velocity)) 2))
 
+(declaim (ftype (function (coord coord coord)
+			  (integer -1 1))
+		accel))
+
 (defun accel (target position velocity)
+  (declaim (optimize speed))
   (let ((a (- target position velocity)))
     (alexandria:clamp a -1 1)))
 
-(defconstant +keys+ #2a((#\1 #\4 #\7) (#\2 #\5 #\8) (#\3 #\6 #\9)))
+(defparameter +keys+ #2a((#\1 #\4 #\7) (#\2 #\5 #\8) (#\3 #\6 #\9)))
 
+(declaim (inline get-key))
 (defun get-key (ax ay)
-  (aref +keys+ (+ ay 1) (+ ax 1)))
+  (aref +keys+ (+ ax 1) (+ ay 1)))
 
 (defun solve (locations)
   (let ((x 0)
@@ -69,8 +77,15 @@
 	(visited (make-array (floor (length locations) 2)
 			     :element-type 'bit
 			     :initial-element 0))
+	(num-moves 0)
 	(moves nil))
+    (declare (type coord x y vx vy)
+	     (type (integer 0 100000000) num-moves)
+	     (type list moves))
     (do ((dest-index (nearest-unvisited locations visited
+					(+ x (dist-to-motionless vx))
+					(+ y (dist-to-motionless vy)))
+		     (nearest-unvisited locations visited
 					(+ x (dist-to-motionless vx))
 					(+ y (dist-to-motionless vy)))))
 	((not dest-index) (coerce (nreverse moves) 'string))
@@ -78,11 +93,17 @@
 	    (dest-y (aref locations (+ (* dest-index 2) 1))))
 	   ((and (= x dest-x) (= y dest-y))
 	    (setf (aref visited dest-index) 1))
-	(let ((ox (accel dest-x x vx))
-	      (oy (accel dest-y y vy)))
-	  (push (get-key ox oy) moves)
-	  (incf vx ox)
-	  (incf vy oy)
+	(declaim (optimize speed))
+	(let ((ax (accel dest-x x vx))
+	      (ay (accel dest-y y vy)))
+	  (push (get-key ax ay) moves)
+	  (when (> num-moves +max-moves+)
+	    (format t "~&Maximum number of moves reached!~%")
+	    (return-from solve (coerce (nreverse moves) 'string)))
+	  (incf num-moves)
+	  (incf vx ax)
+	  (incf vy ay)
 	  (incf x vx)
-	  (incf y vy))))))
+	  (incf y vy)
+	  )))))
 

@@ -25,4 +25,6 @@
   :serial t
   :components ((:module "tests"
 		:serial t
-		:components ((:file "test-binary-heap")))))
+		:components ((:file "test-icfp")
+			     (:file "test-spaceship")
+			     (:file "test-binary-heap")))))

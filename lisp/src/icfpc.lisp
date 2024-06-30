@@ -12,8 +12,10 @@
   (format t "Usage: icfpc <command> [arg...]
 
 Possible commands:
+  submit <string>
   eval-file <file>
-  solve-lambdaman <file>
+  solve-lambdaman <number>
+  solve-spaceship <number>
 "))
 
 (defun process (args)
@@ -51,8 +53,9 @@ Possible commands:
 					   ".txt"))
 		(locations (spaceship:read-locations problem-file))
 		(moves (spaceship:solve locations)))
-	   (format t "~&Number of locations to visit: ~A~%" (floor (length locations) 2))
-	   (format t "Moves: ~S~%" moves)))
+	   (format t "Number of moves: ~S~%" (length moves))
+	   (when (cddr args)
+	     (send (list (ascii->icfp (concatenate 'string "solve spaceship" problem-number " " moves)))))))
 	(t (usage))))
 
 

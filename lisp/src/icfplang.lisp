@@ -42,8 +42,8 @@
     (#\+ '+)
     (#\- '-)
     (#\* '*)
-    (#\/ '/)
-    (#\% '%)
+    (#\/ 'truncate)
+    (#\% 'rem)
     (#\< '<)
     (#\> '>)
     (#\= '=)
@@ -64,8 +64,8 @@
     (+ "B+")
     (- "B-")
     (* "B*")
-    (/ "B/")
-    (% "B%")
+    (truncate "B/")
+    (rem "B%")
     (< "B<")
     (> "B>")
     (= "B=")
@@ -206,8 +206,8 @@
 		 (+ (+ (evaluate (cadr e)) (evaluate (caddr e))))
 		 (- (- (evaluate (cadr e)) (evaluate (caddr e))))
 		 (* (* (evaluate (cadr e)) (evaluate (caddr e))))
-		 (/ (truncate (evaluate (cadr e)) (evaluate (caddr e))))
-		 (% (rem (evaluate (cadr e)) (evaluate (caddr e))))
+		 (truncate (truncate (evaluate (cadr e)) (evaluate (caddr e))))
+		 (rem (rem (evaluate (cadr e)) (evaluate (caddr e))))
 		 (< (< (evaluate (cadr e)) (evaluate (caddr e))))
 		 (> (> (evaluate (cadr e)) (evaluate (caddr e))))
 		 (= (equal (evaluate (cadr e)) (evaluate (caddr e))))
@@ -295,9 +295,9 @@
 		  (rename v v1 (cadddr e))))
 	(t (cons (car e) (mapcar #'(lambda (e) (rename v v1 e)) (cdr e)))))))
 
-(defconstant +Y+ '(lambda 1 (apply
-			     (lambda 2 (apply (var 1) (apply (var 2) (var 2))))
-			     (lambda 2 (apply (var 1) (apply (var 2) (var 2)))))))
+(defparameter +Y+ '(lambda 1 (apply
+			      (lambda 2 (apply (var 1) (apply (var 2) (var 2))))
+			      (lambda 2 (apply (var 1) (apply (var 2) (var 2)))))))
 		   
 
 (defvar +REPEAT+ `(apply ,+Y+
@@ -372,32 +372,33 @@
   
 (defun simplify (e)
   "Simplify for display."
-  ;; (flatten-app
+  (flatten-app
    (join-lambdas
     (var-to-symbol
-     (static-eval
+     ;(static-eval
       (subst-if 'Y #'y-combinator-p e)))))
 
 (defun flatten-app (e)
   (if (consp e)
-      (if (and (eq (car e) 'apply)
-	       (consp (cadr e))
-	       (eq (car (cadr e)) 'apply))
-	  (flatten-app (list 'lambda (flatten-app (cadr (cadr e)))
-			     (flatten-app (caddr (cadr e)))
-			     (flatten-app (caddr e))))
-	  (cons (car e) (mapcar #'flatten-app (cdr e))))
+      (let ((op (car e))
+	    (rest (mapcar #'flatten-app (cdr e))))
+	(if (and (member op '(and or + * concat))
+		 (consp (car rest))
+		 (eq op (car (car rest))))
+	    `(,op ,@(cdar rest) ,@(cdr rest))
+	    `(,op ,@rest)))
       e))
 
 (defun join-lambdas (e)
-  (if (and (consp e)
-	   (eq (car e) 'lambda)
-	   (consp (caddr e))
-	   (eq (caaddr e) 'lambda))
-      (join-lambdas (list 'lambda (join-vars (cadr e) (cadr (caddr e))) (caddr (caddr e))))
-      (if (consp e)
-	  (cons (car e) (mapcar #'join-lambdas (cdr e)))
-	  e)))
+  (if (consp e)
+      (let ((op (car e))
+	    (rest (mapcar #'join-lambdas (cdr e))))
+	(if (and (eq op 'lambda)
+		 (consp (cadr rest))
+		 (eq (caadr rest) 'lambda))
+	    `(lambda ,(join-vars (cadr e) (cadr (cadr rest))) ,(caddr (cadr rest)))
+	    `(,op ,@rest)))
+      e))
 
 (defun join-vars (a b)
   (let ((a (if (atom a) (list a) a))
