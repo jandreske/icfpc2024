@@ -36,7 +36,7 @@ def do_step(boards):
                     if old[y - 1][x].isnumeric():
                         new[y + 1][x] = old[y - 1][x]
                         new[y - 1][x] = '.'
-            if old[y][x - 1].isnumeric() and old[y - 1][x].isnumeric():
+            if old[y][x - 1].lstrip('-+').isnumeric() and old[y - 1][x].lstrip('-+').isnumeric():
                 match old[y][x]:
                     case '+':
                         new[y][x + 1] = str(int(old[y][x - 1]) + int(old[y - 1][x]))
@@ -76,10 +76,9 @@ def do_step(boards):
                             new[y][x - 1] = '.'
                             new[y - 1][x] = '.'
                     case '@':
-                        if old[y][x + 1].isnumeric() and old[y + 1][x].isnumeric():
+                        if old[y][x + 1].lstrip('-+').isnumeric() and old[y + 1][x].lstrip('-+').isnumeric():
                             jump = int(old[y + 1][x])
-                            boards[len(boards) - 1 - jump][y - int(old[y][x + 1])][x - int(old[y][x - 1])] = old[y - 1][
-                                x]
+                            boards[len(boards) - 1 - jump][y - int(old[y][x + 1])][x - int(old[y][x - 1])] = old[y - 1][x]
 
     for y in range(len(old)):
         for x in range(len(old[0])):
@@ -98,38 +97,29 @@ def show(board):
     print("")
 
 
-program = """. 10 . 0 . . < . < 0 > . A > . > . .
-A % . = . = . . 1 . . v 10 . . . v .
-. . . . . . > . + S . . % . . . . .
-. v . v . . . . . . . . . v . . v .
-. . . . . . . . . . . . . . . . . .
-. v 0 + . > . > . > S . . v . . v .
-. . . . > . > . > . . . . . . 0 . .
-. v . ^ 2 . 1 . . v . . . # . * v .
-. . > . % . = . . . . 1 ^ . . S . .
-. v . . . . . > . * . + . . . . v .
-. . . 0 = . v . . . . . . < . < . .
-. v . . . . . > . > . . v 10 . . . .
-. . . . v 0 > . . . v . . / . > . .
-. v . . . v . v 10 . . . . . . . v .
-. . . . v . . . / . * . . . . < . .
-. v . . . v . . . . . . . . v . . .
-. . . . v . . . . . v . . . . . . .
-. v . . . + . . 10 . . . . . v . . .
-. . > . . . > . * . v 0 . . . . . .
-. . . v . < . < . . . + . . v . . .
-. . . . + . > . < . < . . . . . . .
-. . . . . . . v . . . . . . v . . .
-. . . . . . < . > . . . . < . > . .
-. . . . 0 @ 11 . 0 @ 23 12 @ 22 . 4 @ 23
-. . . . . 19 . . . 19 . . 19 . . . 19 ."""
-A = 134212
+program = """. . . . . . . . . . . . . . . . . . . . 1 . . . . .
+. . . . . . . . . . . . . . . . . . . 2 + . . . . .
+. . . . . . . . . . . . . . . . . . 0 . . . . . . .
+. . . . . . . 0 . . . . . . . A > . = . + . . . . .
+. . . . . . . v . < 2 > . . . . . . . . . > . > . .
+. . . . . . < . * A . . v . . . . . . . v . . 5 @ 4
+. . . . A = . . . v . . . . . . . . . < . > . . 5 .
+. . . . . . . . v . > . / . . 0 . 14 @ -3 v 12 @ 3 . .
+. . . . 0 * . . . v 2 . . > . + . . 5 . . . 5 . . .
+. . . . . . . . v . % . v 0 . . . . . 10 @ 1 . . . .
+. . . . 2 + . . . . . . . + . v . . . . 5 . . . . .
+. . . . . S . 0 + . + . . . . . . . . . . . . . . .
+. . . . . . . . . . . . . v -2 @ 9 . . . . . . . . .
+. . . . . . . . . 3 @ 8 . . . 5 . . . . . . . . . .
+. . . . . . . . . . 5 . 4 @ 7 . . . . . . . . . . .
+. . . . . . . . . . . . . 5 . . . . . . . . . . . ."""
+A = 3123
 
 program = re.sub("A", str(A), program)
 start = make_board(program)
 show(start)
 states = [start]
-for i in range(5000):
+for i in range(50000):
     result = do_step(states)
     # show(states[-1])
     if result is not None:
