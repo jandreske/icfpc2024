@@ -177,7 +177,6 @@
 	    e
 	    (error "incomplete parse: ~S of ~S" k end))))))
 
-
 (defun eval-icfp (e)
   (let ((betas 0))
     (declare (type (integer 0 *) betas))
@@ -309,8 +308,9 @@
 				   (concat (var 4)
 					   (apply (apply (var 3) (var 4) (- (var 5) 1))))))))))
 
+
 ;; (defvar +LAM6+ `(apply (lambda 6 (apply (apply (var 6) "L") 18684)) ,+repeat+))
-(defvar +LAM6+ `(apply (apply ,+REPEAT+ "L") 18684))
+(defvar +LAM6+ `(apply (apply ,+REPEAT+ "L") 18683))
 
 (defvar +LAM9+
   `(APPLY
@@ -331,13 +331,12 @@
 	      (APPLY (VAR 1) (+ (VAR 2) 1)))))))
     0))
 
-
 (defun optimize-moves (moves)
   (let ((groups (util:find-repetitions moves))
 	(repeat '(var 10)))
     (labels ((run (str ms)
 	       (cond ((null ms) (coerce (nreverse str) 'string))
-		     ((< (car (car ms)) 8)
+		     ((<= (car (car ms)) 44)
 		      (run (cons-times (caar ms) (cdar ms) str) (cdr ms)))
 		     (t
 		      `(concat ,(coerce (nreverse str) 'string)
