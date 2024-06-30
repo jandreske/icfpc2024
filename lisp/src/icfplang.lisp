@@ -309,7 +309,28 @@
 				   (concat (var 4)
 					   (apply (apply (var 3) (var 4) (- (var 5) 1))))))))))
 
-(defvar +LAM6+ `(apply (lambda 6 (apply (apply (var 6) "L") 18684)) ,+repeat+))
+;; (defvar +LAM6+ `(apply (lambda 6 (apply (apply (var 6) "L") 18684)) ,+repeat+))
+(defvar +LAM6+ `(apply (apply ,+REPEAT+ "L") 18684))
+
+(defvar +LAM9+
+  `(APPLY
+    (APPLY
+     ,+Y+
+     (LAMBDA 1
+       (LAMBDA 2
+	 (IF (= (VAR 2) 2499)
+	     ""
+	     (CONCAT
+	      (if (= (rem (truncate (var 2) 50) 2) 0) ; even row
+		  (if (= (rem (var 2) 50) 49)
+		      ,(ascii->icfp "D")
+		      ,(ascii->icfp "R"))
+		  (if (= (rem (var 2) 50) 49)
+		      ,(ascii->icfp "D")
+		      ,(ascii->icfp "L")))
+	      (APPLY (VAR 1) (+ (VAR 2) 1)))))))
+    0))
+
 
 (defun optimize-moves (moves)
   (let ((groups (util:find-repetitions moves))
