@@ -52,6 +52,14 @@ Possible commands:
 					 ,opt)))
 	       (send (list (ascii->icfp (concatenate 'string "solve lambdaman" problem-number " " moves))))
 	       )))
+	((string= (car args) "show-spaceship")
+	 (let* ((problem-number (cadr args))
+		(problem-file (concatenate 'string (uiop:getenv "ICFPC_HOME")
+					   "/courses/spaceship/problems/spaceship"
+					   problem-number
+					   ".txt"))
+		(locations (spaceship:read-locations problem-file)))
+	   (gui:show :spaceship locations)))
 	((string= (car args) "solve-spaceship")
 	 (let* ((problem-number (cadr args))
 		(problem-file (concatenate 'string (uiop:getenv "ICFPC_HOME")

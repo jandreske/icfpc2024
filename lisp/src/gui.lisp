@@ -7,13 +7,18 @@
 
 ;;; see: https://peterlane.codeberg.page/ltk-examples/
 
-(defun show ()
+(defconstant +map-width+ 800)
+(defconstant +map-height+ 800)
+
+
+
+(defun show (&key spaceship)
   (with-nodgui ()
     (wm-title *tk* "ICFPC 2024")
     (let* ((content (make-instance 'frame))
 	   (frame (make-instance 'canvas :master content
 				 :borderwidth 5 :relief :ridge
-				 :width 640 :height 480))
+				 :width +map-width+ :height +map-height+))
 	   (name-label (make-instance 'label :master content
 				      :text "Name"))
 	   (name (make-instance 'entry :master content))
@@ -47,5 +52,40 @@
       (grid-columnconfigure content 2 :weight 3)
       (grid-columnconfigure content 3 :weight 1)
       (grid-columnconfigure content 4 :weight 1)
-      (grid-rowconfigure content 1 :weight 1))
-    ))
+      (grid-rowconfigure content 1 :weight 1)
+
+      (when spaceship
+	(draw-locations frame spaceship)))))
+
+(defun draw-locations (canvas locations)
+  (let* ((galaxy (spaceship::galaxy-size locations))
+	 (x1 (car galaxy))
+	 (y1 (cadr galaxy))
+	 (x2 (caddr galaxy))
+	 (y2 (cadddr galaxy))
+	 (width (+ 1 (- x2 x1)))
+	 (height (+ 1 (- y2 y1)))
+	 (scale
+	   (if (and (<= width +map-width+) (<= height +map-height+))
+	       1
+	       (max (/ width +map-width+)
+		    (/ height +map-height+))))
+	 (plotted 0))
+    (format t "Galaxy: ~a~%" galaxy)
+    (flet ((conv-x (x)
+	     (/ (- x x1) scale))
+	   (conv-y (y)
+	     (- +map-height+ (+ 0.01 (/ (- y y1) scale)))))
+      (do ((i 0 (+ i 2)))
+	  ((>= i (length locations)))
+	(when (draw-point canvas (conv-x (aref locations i)) (conv-y (aref locations (+ i 1))))
+	  (incf plotted)))
+      (format t "~a of ~a locations plotted~%" plotted (/ (length locations) 2))
+      )))
+
+(defun draw-point (canvas x y)
+  (if (or (< x 0) (< y 0) (>= x +map-width+) (>= y +map-height+))
+      (progn (format t "Outside: ~,2f ~,2f~%" x y) nil)
+      (progn (create-rectangle canvas x y (+ x 1) (+ y 1))
+	     t)))
+
