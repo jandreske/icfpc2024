@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34714.143
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LambdaMan", "LambdaMan\LambdaMan.csproj", "{4926C1BD-4F81-40BC-8ADB-940015B7C8BF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4926C1BD-4F81-40BC-8ADB-940015B7C8BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4926C1BD-4F81-40BC-8ADB-940015B7C8BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4926C1BD-4F81-40BC-8ADB-940015B7C8BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4926C1BD-4F81-40BC-8ADB-940015B7C8BF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6B708925-F4C1-4781-A4D0-D277BE36CD9D}
+	EndGlobalSection
+EndGlobal

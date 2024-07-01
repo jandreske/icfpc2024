@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Problems\lambdaman1.txt" />
+    <None Remove="Problems\lambdaman10.txt" />
+    <None Remove="Problems\lambdaman11.txt" />
+    <None Remove="Problems\lambdaman12.txt" />
+    <None Remove="Problems\lambdaman13.txt" />
+    <None Remove="Problems\lambdaman14.txt" />
+    <None Remove="Problems\lambdaman15.txt" />
+    <None Remove="Problems\lambdaman16.txt" />
+    <None Remove="Problems\lambdaman17.txt" />
+    <None Remove="Problems\lambdaman18.txt" />
+    <None Remove="Problems\lambdaman19.txt" />
+    <None Remove="Problems\lambdaman2.txt" />
+    <None Remove="Problems\lambdaman20.txt" />
+    <None Remove="Problems\lambdaman21.txt" />
+    <None Remove="Problems\lambdaman3.txt" />
+    <None Remove="Problems\lambdaman4.txt" />
+    <None Remove="Problems\lambdaman5.txt" />
+    <None Remove="Problems\lambdaman6.txt" />
+    <None Remove="Problems\lambdaman7.txt" />
+    <None Remove="Problems\lambdaman8.txt" />
+    <None Remove="Problems\lambdaman9.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Problems\lambdaman1.txt" />
+    <EmbeddedResource Include="Problems\lambdaman10.txt" />
+    <EmbeddedResource Include="Problems\lambdaman11.txt" />
+    <EmbeddedResource Include="Problems\lambdaman12.txt" />
+    <EmbeddedResource Include="Problems\lambdaman13.txt" />
+    <EmbeddedResource Include="Problems\lambdaman14.txt" />
+    <EmbeddedResource Include="Problems\lambdaman15.txt" />
+    <EmbeddedResource Include="Problems\lambdaman16.txt" />
+    <EmbeddedResource Include="Problems\lambdaman17.txt" />
+    <EmbeddedResource Include="Problems\lambdaman18.txt" />
+    <EmbeddedResource Include="Problems\lambdaman19.txt" />
+    <EmbeddedResource Include="Problems\lambdaman2.txt" />
+    <EmbeddedResource Include="Problems\lambdaman20.txt" />
+    <EmbeddedResource Include="Problems\lambdaman21.txt" />
+    <EmbeddedResource Include="Problems\lambdaman3.txt" />
+    <EmbeddedResource Include="Problems\lambdaman4.txt" />
+    <EmbeddedResource Include="Problems\lambdaman5.txt" />
+    <EmbeddedResource Include="Problems\lambdaman6.txt" />
+    <EmbeddedResource Include="Problems\lambdaman7.txt" />
+    <EmbeddedResource Include="Problems\lambdaman8.txt" />
+    <EmbeddedResource Include="Problems\lambdaman9.txt" />
+  </ItemGroup>
+
+</Project>
