@@ -59,7 +59,7 @@ Possible commands:
 					   problem-number
 					   ".txt"))
 		(locations (spaceship:read-locations problem-file))
-		(moves (spaceship:solve locations)))
+		(moves (spaceship:solve (read-from-string problem-number) locations)))
 	   (format t "Number of moves: ~S~%" (length moves))
 	   (with-open-file (str "spaceship-moves.txt"
 			    :direction :output
