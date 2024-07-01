@@ -3,7 +3,7 @@
 Team "A Storm of Minds"
 [ICFP Contest 2024](https://icfpcontest2024.github.io/) entry.
 
-State of the code at the end of the lightnung round ist in branch `lightning-round`.
+State of the code at the end of the lightning round ist in branch `lightning-round`.
 State of the code at the end of the contest is in branch `main-round`.
 
 ## Team
@@ -17,5 +17,6 @@ using the rest for sleep, family, or sports.
 * Python (Scripts, spaceship solver, 3D experimentation)
 * Haskell (prototyping ICFP evaluator)
 * Common Lisp (ICFP evaluator, lambdaman, spaceship, and efficiency solvers and tools)
+* C# (Lambdaman solver)
 * ICFP
 * 3D
