@@ -1,13 +1,16 @@
 (defpackage :spaceship
   (:use :cl)
   (:import-from :alexandria :array-index :clamp)
-  (:export :read-locations :solve :solve2))
+  (:export :read-locations :solve))
 
 (in-package :spaceship)
 
 (defconstant +max-moves+ 10000000)
 
 (deftype coord () '(signed-byte 32))
+
+;; In a severe case of premature optimization, I decided to
+;; put the locations into a flat vector #(x1 y1 x2 y2 ...).
 
 (defun read-locations (file)
   (with-open-file (s file :direction :input)
@@ -26,10 +29,13 @@
 		manhattan-distance))
 (declaim (inline manhattan-distance))
 (defun manhattan-distance (x1 y1 x2 y2)
+  (declare (optimize speed))
   (+ (abs (- x2 x1))
      (abs (- y2 y1))))
 
 (defun distance-estimate (x y vx vy dest-x dest-y)
+  (declare (optimize speed))
+  (declare (type coord x y vx vy dest-x dest-y))
   (let ((delta-x (- dest-x x))
 	(delta-y (- dest-y y)))
     (when (and (not (= 0 vx)) (= (signum delta-x) (signum vx)))
@@ -57,22 +63,26 @@
 	))))
 
 
+(defun all-locations (x y)
+  (declare (ignore x y))
+  t)
 
-(defun nearest-unvisited (locations visited x y vx vy &key (filter #'(lambda (x y) t)))
+
+(defun nearest-unvisited (locations visited x y vx vy &key (filter #'all-locations))
   (declare (type coord x y vx vy)
 	   (type (simple-array coord (*)) locations)
 	   (type (simple-array bit (*)) visited))
+  (declare (optimize speed))
   (let ((pos nil)
 	(dist 0)
 	(n (length visited)))
-    (declare (optimize speed))
     (declare (type (unsigned-byte 24) dist))
     (dotimes (i n)
       (when (zerop (aref visited i))
 	(let* ((dx (aref locations (* i 2)))
 	       (dy (aref locations (+ (* i 2) 1)))
-	       (d ; (manhattan-distance x y dx dy))
-		(distance-estimate x y vx vy dx dy)))
+	       (d  (manhattan-distance x y dx dy)))
+		;; (distance-estimate x y vx vy dx dy)))
 	  (when (and (or (null pos) (< d dist)) (funcall filter dx dy))
 	    (setf dist d)
 	    (setf pos i)))))
@@ -185,19 +195,20 @@
   (declare (optimize speed))
   (ecase i
     (0 (values -1 -1))
-    (1 (values -1 0))
-    (2 (values -1 1))
-    (3 (values 0 -1))
-    (4 (values 0 0))
-    (5 (values 0 1))
-    (6 (values 1 -1))
-    (7 (values 1 0))
-    (8 (values 1 1))))
+    (1 (values  0 -1))
+    (2 (values  1 -1))
+    (3 (values -1  0))
+    (4 (values  0  0))
+    (5 (values  1  0))
+    (6 (values -1  1))
+    (7 (values  0  1))
+    (8 (values  1  1))))
 
 (defun moves-to (d1x d1y d2x d2y x y vx vy move-code)
   (declare (optimize speed))
   (declare (type fixnum d1x d1y d2x d2y x y vx vy move-code))
-  (let ((1hit nil))
+  (let ((1hit nil)
+	(2hit nil))
     (do ((len 1 (+ len 1))
 	 (code move-code (truncate code 9)))
 	((= len 5) 5)
@@ -209,29 +220,44 @@
 	(incf y vy)
 	(when (and (= x d1x) (= y d1y))
 	  (setf 1hit t))
-	(when (and 1hit (= x d2x) (= y d2y))
+	(when (and (= x d2x) (= y d2y))
+	  (setf 2hit t))
+	(when (and 1hit 2hit)
 	  (return-from moves-to len))))))
-	
+
 
 (defun accel-ahead (locs i x y vx vy)
   (let ((d1x (aref locs i))
 	(d1y (aref locs (+ i 1))))
-    (if (>= (+ i 2) (length locs))
+    (if (or (>= (+ i 2) (length locs)) (> (* 10 (1+ (manhattan-distance x y d1x d1y))) (manhattan-distance 0 0 vx vy)))
 	(accel-exact (- d1x x) (- d1y y) vx vy)
 	(let ((d2x (aref locs (+ i 2)))
 	      (d2y (aref locs (+ i 3)))
 	      (best-length 5)
 	      (best-move 0))
-	  (dotimes (moves (* 9 9 9 9))
-	    (let ((n (moves-to d1x d1y d2x d2y x y vx vy moves)))
+	  (dotimes (move-code (* 9 9 9 9))
+	    (let ((n (moves-to d1x d1y d2x d2y x y vx vy move-code)))
 	      (when (< n best-length)
+		;; (format t "Best improved to ~a~%" n)
 		(setf best-length n)
-		(setf best-move moves))))
+		(setf best-move move-code))))
 	  (if (> best-length 4)
 	      (accel-exact (- d1x x) (- d1y y) vx vy)
-	      (decode-move (rem best-move 9)))))))
+	      (progn
+		;; (format t "can go from ~a ~a via ~a ~a to ~a ~a in ~a moves:~%"
+		;; 	x y d1x d1y d2x d2y
+		;; 	best-length)
+		;; (dotimes (i best-length)
+		;;   (multiple-value-bind (ax ay)
+		;;       (decode-move (rem (truncate best-move (expt 9 i)) 9))
+		;;     (format t "  accel ~a ~a~%" ax ay)))
+		
+		(decode-move (rem best-move 9))))))))
+
 
 (defparameter +keys+ #2a((#\1 #\4 #\7) (#\2 #\5 #\8) (#\3 #\6 #\9)))
+
+(declaim (type (simple-array * (3 3)) +keys+))
 
 (declaim (inline get-key))
 (defun get-key (ax ay)
@@ -239,13 +265,13 @@
 
 (defun solve (problem-number locations)
   (case problem-number
-    (25 (solve-quadrants locations))
-    (5 (solve2 locations))
-    (t (solve1 locations))))
+    ;;(25 (solve-quadrants locations))
+    ;;(5 (solve2 locations))
+    (t (solve-change-dest locations))))
 
 (defun solve1 (locations)
   (solve-set locations
-	     #'(lambda (x y) t)
+	     #'all-locations
 	     0 0
 	     0 0))
 
@@ -296,6 +322,8 @@
 	  )))))
 
 
+
+
 (defun solve2 (locations)
   (declare (type (simple-array coord (*)) locations))
   (let ((x 0)
@@ -323,9 +351,9 @@
 		    vx vy)
 	    (setf (aref visited dest-index) 1))
 	(multiple-value-bind (ax ay)
-	    (accel-ahead locations (* 2 dest-index) x y vx vx)
+	    (accel-ahead locations (* 2 dest-index) x y vx vy)
 	  (push (get-key ax ay) moves)
-	  (format t "Move: ~C~%" (car moves))
+	  ;; (format t "Move: ~C~%" (car moves))
 	  (when (> num-moves +max-moves+)
 	    (format t "~&Maximum number of moves reached!~%")
 	    (return-from solve2 (coerce (nreverse moves) 'string)))
@@ -335,3 +363,42 @@
 	  (incf x vx)
 	  (incf y vy)
 	  )))))
+
+
+(defun solve-change-dest (locations)
+  (declare (type (simple-array coord (*)) locations))
+  (declare (optimize speed))
+  (let ((x 0)
+	(y 0)
+	(vx 0)
+	(vy 0)
+	(visited (make-array (floor (length locations) 2)
+			     :element-type 'bit
+			     :initial-element 0))
+	(num-moves 0)
+	(moves nil))
+    (declare (type coord x y vx vy)
+	     (type (integer 0 100000000) num-moves)
+	     (type list moves))
+    (do ((dest-index (nearest-unvisited locations visited x y 0 0)
+		     (nearest-unvisited locations visited x y 0 0)))
+	((not dest-index)
+	 (coerce (nreverse moves) 'string))
+      (let ((dest-x (aref locations (* dest-index 2)))
+	    (dest-y (aref locations (+ (* dest-index 2) 1))))
+	(cond 
+	  ((and (= x dest-x) (= y dest-y))
+	   (setf (aref visited dest-index) 1))
+	  (t
+	   (let ((ax (accel dest-x x vx))
+		 (ay (accel dest-y y vy)))
+	     (push (get-key ax ay) moves)
+	     (when (> num-moves +max-moves+)
+	       (format t "~&Maximum number of moves reached!~%")
+	       (return-from solve-change-dest (coerce (nreverse moves) 'string)))
+	     (incf num-moves)
+	     (incf vx ax)
+	     (incf vy ay)
+	     (incf x vx)
+	     (incf y vy)
+	     )))))))
