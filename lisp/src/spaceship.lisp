@@ -25,13 +25,13 @@
 	(push n locations)))))
 
 
-(declaim (ftype (function (coord coord coord coord) (unsigned-byte 24))
-		manhattan-distance))
-(declaim (inline manhattan-distance))
-(defun manhattan-distance (x1 y1 x2 y2)
+(defun distance (x1 y1 x2 y2)
+  "Minimum distance from (x1 y1) to (x2 y2)."
   (declare (optimize speed))
-  (+ (abs (- x2 x1))
-     (abs (- y2 y1))))
+  (declare (type coord x1 y1 x2 y2))
+  (let ((dx (- x2 x1))
+	(dy (- y2 y1)))
+  (max (abs dx)) (abs dy)))
 
 (defun distance-estimate (x y vx vy dest-x dest-y)
   (declare (optimize speed))
@@ -42,7 +42,7 @@
       (setf delta-x (truncate delta-x vx)))
     (when (and (not (= 0 vy)) (= (signum delta-y) (signum vy)))
       (setf delta-y (truncate delta-y vy)))
-    (+ (abs delta-x) (abs delta-y))))
+    (max (abs delta-x) (abs delta-y))))
 
 
 (defun galaxy-size (locations)
@@ -76,13 +76,11 @@
   (let ((pos nil)
 	(dist 0)
 	(n (length visited)))
-    (declare (type (unsigned-byte 24) dist))
     (dotimes (i n)
       (when (zerop (aref visited i))
 	(let* ((dx (aref locations (* i 2)))
 	       (dy (aref locations (+ (* i 2) 1)))
-	       (d  (manhattan-distance x y dx dy)))
-		;; (distance-estimate x y vx vy dx dy)))
+	       (d  (distance x y dx dy)))
 	  (when (and (or (null pos) (< d dist)) (funcall filter dx dy))
 	    (setf dist d)
 	    (setf pos i)))))
@@ -229,7 +227,7 @@
 (defun accel-ahead (locs i x y vx vy)
   (let ((d1x (aref locs i))
 	(d1y (aref locs (+ i 1))))
-    (if (or (>= (+ i 2) (length locs)) (> (* 10 (1+ (manhattan-distance x y d1x d1y))) (manhattan-distance 0 0 vx vy)))
+    (if (or (>= (+ i 2) (length locs)) (> (* 10 (1+ (distance x y d1x d1y))) (distance 0 0 vx vy)))
 	(accel-exact (- d1x x) (- d1y y) vx vy)
 	(let ((d2x (aref locs (+ i 2)))
 	      (d2y (aref locs (+ i 3)))
